@@ -1,0 +1,82 @@
+# TASK 7: Get Basic Sales Summary from a Tiny SQLite Database using Python
+
+# Import required libraries
+import sqlite3
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# ---------------------------
+# Step 1: Create SQLite Database and Table (if not exists)
+# ---------------------------
+
+# Connect to SQLite database (creates sales_data.db if not present)
+conn = sqlite3.connect("sales_data.db")
+cursor = conn.cursor()
+
+# Create a sales table
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product TEXT,
+    quantity INTEGER,
+    price REAL
+)
+""")
+
+# ---------------------------
+# Step 2: Insert Sample Data
+# ---------------------------
+
+# Insert only if table is empty
+cursor.execute("SELECT COUNT(*) FROM sales")
+if cursor.fetchone()[0] == 0:
+    sample_data = [
+        ("Laptop", 5, 60000),
+        ("Laptop", 3, 62000),
+        ("Smartphone", 10, 20000),
+        ("Smartphone", 7, 18000),
+        ("Headphones", 15, 2000),
+        ("Headphones", 10, 2200),
+        ("Tablet", 4, 30000),
+        ("Tablet", 2, 28000)
+    ]
+    cursor.executemany("INSERT INTO sales (product, quantity, price) VALUES (?, ?, ?)", sample_data)
+    conn.commit()
+
+# ---------------------------
+# Step 3: Run SQL Query to Get Sales Summary
+# ---------------------------
+
+query = """
+SELECT product, 
+       SUM(quantity) AS total_qty, 
+       SUM(quantity * price) AS revenue
+FROM sales
+GROUP BY product
+"""
+
+df = pd.read_sql_query(query, conn)
+
+# ---------------------------
+# Step 4: Display Results
+# ---------------------------
+
+print("📊 Sales Summary:\n")
+print(df)
+
+# ---------------------------
+# Step 5: Plot Bar Chart of Revenue
+# ---------------------------
+
+plt.figure(figsize=(8,5))
+df.plot(kind='bar', x='product', y='revenue', legend=False, color="skyblue")
+plt.title("Revenue by Product")
+plt.ylabel("Revenue (₹)")
+plt.xlabel("Product")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig("sales_chart.png")  # save chart as image
+plt.show()
+
+# Close connection
+conn.close()
